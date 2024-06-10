@@ -1,29 +1,40 @@
-function Plane() {}
-Plane.prototype = {
+class Plane {
+  // Constructor function
+  static create(anchor, v1, v2) {
+    var P = new Plane();
+    return P.setVectors(anchor, v1, v2);
+  };
 
+  // X-Y-Z planes
+  static XY = Plane.create(Vector.Zero(3), Vector.k);
+  static YZ = Plane.create(Vector.Zero(3), Vector.i);
+  static ZX = Plane.create(Vector.Zero(3), Vector.j);
+  static YX = Plane.XY;
+  static ZY = Plane.YZ;
+  static XZ = Plane.ZX;
   // Returns true iff the plane occupies the same space as the argument
-  eql: function(plane) {
+  eql(plane) {
     return (this.contains(plane.anchor) && this.isParallelTo(plane));
-  },
+  }
 
   // Returns a copy of the plane
-  dup: function() {
+  dup() {
     return Plane.create(this.anchor, this.normal);
-  },
+  }
 
   // Returns the result of translating the plane by the given vector
-  translate: function(vector) {
+  translate(vector) {
     var V = vector.elements || vector;
     return Plane.create([
       this.anchor.elements[0] + V[0],
       this.anchor.elements[1] + V[1],
       this.anchor.elements[2] + (V[2] || 0)
     ], this.normal);
-  },
+  }
 
   // Returns true iff the plane is parallel to the argument. Will return true
   // if the planes are equal, or if you give a line and it lies in the plane.
-  isParallelTo: function(obj) {
+  isParallelTo(obj) {
     var theta;
     if (obj.normal) {
       // obj is a plane
@@ -34,16 +45,16 @@ Plane.prototype = {
       return this.normal.isPerpendicularTo(obj.direction);
     }
     return null;
-  },
-  
+  }
+
   // Returns true iff the receiver is perpendicular to the argument
-  isPerpendicularTo: function(plane) {
+  isPerpendicularTo(plane) {
     var theta = this.normal.angleFrom(plane.normal);
-    return (Math.abs(Math.PI/2 - theta) <= Sylvester.precision);
-  },
+    return (Math.abs(Math.PI / 2 - theta) <= Sylvester.precision);
+  }
 
   // Returns the plane's distance from the given object (point, line or plane)
-  distanceFrom: function(obj) {
+  distanceFrom(obj) {
     if (this.intersects(obj) || this.contains(obj)) { return 0; }
     if (obj.anchor) {
       // obj is a plane or line
@@ -55,56 +66,56 @@ Plane.prototype = {
       var A = this.anchor.elements, N = this.normal.elements;
       return Math.abs((A[0] - P[0]) * N[0] + (A[1] - P[1]) * N[1] + (A[2] - (P[2] || 0)) * N[2]);
     }
-  },
+  }
 
   // Returns true iff the plane contains the given point or line
-  contains: function(obj) {
+  contains(obj) {
     if (obj.normal) { return null; }
     if (obj.direction) {
       return (this.contains(obj.anchor) && this.contains(obj.anchor.add(obj.direction)));
     } else {
       var P = obj.elements || obj;
       var A = this.anchor.elements, N = this.normal.elements;
-      var diff = Math.abs(N[0]*(A[0] - P[0]) + N[1]*(A[1] - P[1]) + N[2]*(A[2] - (P[2] || 0)));
+      var diff = Math.abs(N[0] * (A[0] - P[0]) + N[1] * (A[1] - P[1]) + N[2] * (A[2] - (P[2] || 0)));
       return (diff <= Sylvester.precision);
     }
-  },
+  }
 
   // Returns true iff the plane has a unique point/line of intersection with the argument
-  intersects: function(obj) {
-    if (typeof(obj.direction) == 'undefined' && typeof(obj.normal) == 'undefined') { return null; }
+  intersects(obj) {
+    if (typeof (obj.direction) == 'undefined' && typeof (obj.normal) == 'undefined') { return null; }
     return !this.isParallelTo(obj);
-  },
+  }
 
   // Returns the unique intersection with the argument, if one exists. The result
   // will be a vector if a line is supplied, and a line if a plane is supplied.
-  intersectionWith: function(obj) {
+  intersectionWith(obj) {
     if (!this.intersects(obj)) { return null; }
     if (obj.direction) {
       // obj is a line
       var A = obj.anchor.elements, D = obj.direction.elements,
-          P = this.anchor.elements, N = this.normal.elements;
-      var multiplier = (N[0]*(P[0]-A[0]) + N[1]*(P[1]-A[1]) + N[2]*(P[2]-A[2])) / (N[0]*D[0] + N[1]*D[1] + N[2]*D[2]);
-      return Vector.create([A[0] + D[0]*multiplier, A[1] + D[1]*multiplier, A[2] + D[2]*multiplier]);
+        P = this.anchor.elements, N = this.normal.elements;
+      var multiplier = (N[0] * (P[0] - A[0]) + N[1] * (P[1] - A[1]) + N[2] * (P[2] - A[2])) / (N[0] * D[0] + N[1] * D[1] + N[2] * D[2]);
+      return Vector.create([A[0] + D[0] * multiplier, A[1] + D[1] * multiplier, A[2] + D[2] * multiplier]);
     } else if (obj.normal) {
       // obj is a plane
       var direction = this.normal.cross(obj.normal).toUnitVector();
       // To find an anchor point, we find one co-ordinate that has a value
       // of zero somewhere on the intersection, and remember which one we picked
       var N = this.normal.elements, A = this.anchor.elements,
-          O = obj.normal.elements, B = obj.anchor.elements;
-      var solver = Matrix.Zero(2,2), i = 0;
+        O = obj.normal.elements, B = obj.anchor.elements;
+      var solver = Matrix.Zero(2, 2), i = 0;
       while (solver.isSingular()) {
         i++;
         solver = Matrix.create([
-          [ N[i%3], N[(i+1)%3] ],
-          [ O[i%3], O[(i+1)%3]  ]
+          [N[i % 3], N[(i + 1) % 3]],
+          [O[i % 3], O[(i + 1) % 3]]
         ]);
       }
       // Then we solve the simultaneous equations in the remaining dimensions
       var inverse = solver.inverse().elements;
-      var x = N[0]*A[0] + N[1]*A[1] + N[2]*A[2];
-      var y = O[0]*B[0] + O[1]*B[1] + O[2]*B[2];
+      var x = N[0] * A[0] + N[1] * A[1] + N[2] * A[2];
+      var y = O[0] * B[0] + O[1] * B[1] + O[2] * B[2];
       var intersection = [
         inverse[0][0] * x + inverse[0][1] * y,
         inverse[1][0] * x + inverse[1][1] * y
@@ -113,23 +124,23 @@ Plane.prototype = {
       for (var j = 1; j <= 3; j++) {
         // This formula picks the right element from intersection by
         // cycling depending on which element we set to zero above
-        anchor.push((i == j) ? 0 : intersection[(j + (5 - i)%3)%3]);
+        anchor.push((i == j) ? 0 : intersection[(j + (5 - i) % 3) % 3]);
       }
       return Line.create(anchor, direction);
     }
-  },
+  }
 
   // Returns the point in the plane closest to the given point
-  pointClosestTo: function(point) {
+  pointClosestTo(point) {
     var P = point.elements || point;
     var A = this.anchor.elements, N = this.normal.elements;
     var dot = (A[0] - P[0]) * N[0] + (A[1] - P[1]) * N[1] + (A[2] - (P[2] || 0)) * N[2];
     return Vector.create([P[0] + N[0] * dot, P[1] + N[1] * dot, (P[2] || 0) + N[2] * dot]);
-  },
+  }
 
   // Returns a copy of the plane, rotated by t radians about the given line
   // See notes on Line#rotate.
-  rotate: function(t, line) {
+  rotate(t, line) {
     var R = Matrix.Rotation(t, line.direction).elements;
     var C = line.pointClosestTo(this.anchor).elements;
     var A = this.anchor.elements, N = this.normal.elements;
@@ -144,10 +155,10 @@ Plane.prototype = {
       R[1][0] * N[0] + R[1][1] * N[1] + R[1][2] * N[2],
       R[2][0] * N[0] + R[2][1] * N[1] + R[2][2] * N[2]
     ]);
-  },
+  }
 
   // Returns the reflection of the plane in the given point, line or plane.
-  reflectionIn: function(obj) {
+  reflectionIn(obj) {
     if (obj.normal) {
       // obj is a plane
       var A = this.anchor.elements, N = this.normal.elements;
@@ -166,18 +177,18 @@ Plane.prototype = {
       var P = obj.elements || obj;
       return Plane.create(this.anchor.reflectionIn([P[0], P[1], (P[2] || 0)]), this.normal);
     }
-  },
+  }
 
   // Sets the anchor point and normal to the plane. If three arguments are specified,
   // the normal is calculated by assuming the three points should lie in the same plane.
   // If only two are sepcified, the second is taken to be the normal. Normal vector is
   // normalised before storage.
-  setVectors: function(anchor, v1, v2) {
+  setVectors(anchor, v1, v2) {
     anchor = Vector.create(anchor);
     anchor = anchor.to3D(); if (anchor === null) { return null; }
     v1 = Vector.create(v1);
     v1 = v1.to3D(); if (v1 === null) { return null; }
-    if (typeof(v2) == 'undefined') {
+    if (typeof (v2) == 'undefined') {
       v2 = null;
     } else {
       v2 = Vector.create(v2);
@@ -197,7 +208,7 @@ Plane.prototype = {
       if (mod === 0) { return null; }
       normal = Vector.create([normal.elements[0] / mod, normal.elements[1] / mod, normal.elements[2] / mod]);
     } else {
-      mod = Math.sqrt(v11*v11 + v12*v12 + v13*v13);
+      mod = Math.sqrt(v11 * v11 + v12 * v12 + v13 * v13);
       if (mod === 0) { return null; }
       normal = Vector.create([v1.elements[0] / mod, v1.elements[1] / mod, v1.elements[2] / mod]);
     }
@@ -206,15 +217,3 @@ Plane.prototype = {
     return this;
   }
 };
-
-// Constructor function
-Plane.create = function(anchor, v1, v2) {
-  var P = new Plane();
-  return P.setVectors(anchor, v1, v2);
-};
-
-// X-Y-Z planes
-Plane.XY = Plane.create(Vector.Zero(3), Vector.k);
-Plane.YZ = Plane.create(Vector.Zero(3), Vector.i);
-Plane.ZX = Plane.create(Vector.Zero(3), Vector.j);
-Plane.YX = Plane.XY; Plane.ZY = Plane.YZ; Plane.XZ = Plane.ZX;
