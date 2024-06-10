@@ -1,40 +1,50 @@
 
-function Line() {}
-Line.prototype = {
+class Line {
+  // Constructor function
+  static create(anchor, direction) {
+    var L = new Line();
+    return L.setVectors(anchor, direction);
+  };
+
+  // Axes
+  static X = Line.create(Vector.Zero(3), Vector.i);
+  static Y = Line.create(Vector.Zero(3), Vector.j);
+  static Z = Line.create(Vector.Zero(3), Vector.k);
+
 
   // Returns true if the argument occupies the same space as the line
-  eql: function(line) {
+  eql(line) {
     return (this.isParallelTo(line) && this.contains(line.anchor));
-  },
+  }
 
   // Returns a copy of the line
-  dup: function() {
+  dup() {
     return Line.create(this.anchor, this.direction);
-  },
+  }
 
   // Returns the result of translating the line by the given vector/array
-  translate: function(vector) {
+  translate(vector) {
     var V = vector.elements || vector;
     return Line.create([
       this.anchor.elements[0] + V[0],
       this.anchor.elements[1] + V[1],
       this.anchor.elements[2] + (V[2] || 0)
     ], this.direction);
-  },
+  }
 
   // Returns true if the line is parallel to the argument. Here, 'parallel to'
   // means that the argument's direction is either parallel or antiparallel to
   // the line's own direction. A line is parallel to a plane if the two do not
   // have a unique intersection.
-  isParallelTo: function(obj) {
+  isParallelTo(obj) {
     if (obj.normal) { return obj.isParallelTo(this); }
     var theta = this.direction.angleFrom(obj.direction);
     return (Math.abs(theta) <= Sylvester.precision || Math.abs(theta - Math.PI) <= Sylvester.precision);
-  },
+  }
 
   // Returns the line's perpendicular distance from the argument,
   // which can be a point, a line or a plane
-  distanceFrom: function(obj) {
+  distanceFrom(obj) {
     if (obj.normal) { return obj.distanceFrom(this); }
     if (obj.direction) {
       // obj is a line
@@ -47,51 +57,51 @@ Line.prototype = {
       var P = obj.elements || obj;
       var A = this.anchor.elements, D = this.direction.elements;
       var PA1 = P[0] - A[0], PA2 = P[1] - A[1], PA3 = (P[2] || 0) - A[2];
-      var modPA = Math.sqrt(PA1*PA1 + PA2*PA2 + PA3*PA3);
+      var modPA = Math.sqrt(PA1 * PA1 + PA2 * PA2 + PA3 * PA3);
       if (modPA === 0) return 0;
       // Assumes direction vector is normalized
       var cosTheta = (PA1 * D[0] + PA2 * D[1] + PA3 * D[2]) / modPA;
-      var sin2 = 1 - cosTheta*cosTheta;
+      var sin2 = 1 - cosTheta * cosTheta;
       return Math.abs(modPA * Math.sqrt(sin2 < 0 ? 0 : sin2));
     }
-  },
+  }
 
   // Returns true iff the argument is a point on the line
-  contains: function(point) {
+  contains(point) {
     var dist = this.distanceFrom(point);
     return (dist !== null && dist <= Sylvester.precision);
-  },
+  }
 
   // Returns true iff the line lies in the given plane
-  liesIn: function(plane) {
+  liesIn(plane) {
     return plane.contains(this);
-  },
+  }
 
   // Returns true iff the line has a unique point of intersection with the argument
-  intersects: function(obj) {
+  intersects(obj) {
     if (obj.normal) { return obj.intersects(this); }
     return (!this.isParallelTo(obj) && this.distanceFrom(obj) <= Sylvester.precision);
-  },
+  }
 
   // Returns the unique intersection point with the argument, if one exists
-  intersectionWith: function(obj) {
+  intersectionWith(obj) {
     if (obj.normal) { return obj.intersectionWith(this); }
     if (!this.intersects(obj)) { return null; }
     var P = this.anchor.elements, X = this.direction.elements,
-        Q = obj.anchor.elements, Y = obj.direction.elements;
+      Q = obj.anchor.elements, Y = obj.direction.elements;
     var X1 = X[0], X2 = X[1], X3 = X[2], Y1 = Y[0], Y2 = Y[1], Y3 = Y[2];
     var PsubQ1 = P[0] - Q[0], PsubQ2 = P[1] - Q[1], PsubQ3 = P[2] - Q[2];
-    var XdotQsubP = - X1*PsubQ1 - X2*PsubQ2 - X3*PsubQ3;
-    var YdotPsubQ = Y1*PsubQ1 + Y2*PsubQ2 + Y3*PsubQ3;
-    var XdotX = X1*X1 + X2*X2 + X3*X3;
-    var YdotY = Y1*Y1 + Y2*Y2 + Y3*Y3;
-    var XdotY = X1*Y1 + X2*Y2 + X3*Y3;
+    var XdotQsubP = - X1 * PsubQ1 - X2 * PsubQ2 - X3 * PsubQ3;
+    var YdotPsubQ = Y1 * PsubQ1 + Y2 * PsubQ2 + Y3 * PsubQ3;
+    var XdotX = X1 * X1 + X2 * X2 + X3 * X3;
+    var YdotY = Y1 * Y1 + Y2 * Y2 + Y3 * Y3;
+    var XdotY = X1 * Y1 + X2 * Y2 + X3 * Y3;
     var k = (XdotQsubP * YdotY / XdotX + XdotY * YdotPsubQ) / (YdotY - XdotY * XdotY);
-    return Vector.create([P[0] + k*X1, P[1] + k*X2, P[2] + k*X3]);
-  },
+    return Vector.create([P[0] + k * X1, P[1] + k * X2, P[2] + k * X3]);
+  }
 
   // Returns the point on the line that is closest to the given point or line
-  pointClosestTo: function(obj) {
+  pointClosestTo(obj) {
     if (obj.direction) {
       // obj is a line
       if (this.intersects(obj)) { return this.intersectionWith(obj); }
@@ -110,8 +120,8 @@ Line.prototype = {
       if (this.contains(P)) { return Vector.create(P); }
       var A = this.anchor.elements, D = this.direction.elements;
       var D1 = D[0], D2 = D[1], D3 = D[2], A1 = A[0], A2 = A[1], A3 = A[2];
-      var x = D1 * (P[1]-A2) - D2 * (P[0]-A1), y = D2 * ((P[2] || 0) - A3) - D3 * (P[1]-A2),
-          z = D3 * (P[0]-A1) - D1 * ((P[2] || 0) - A3);
+      var x = D1 * (P[1] - A2) - D2 * (P[0] - A1), y = D2 * ((P[2] || 0) - A3) - D3 * (P[1] - A2),
+        z = D3 * (P[0] - A1) - D1 * ((P[2] || 0) - A3);
       var V = Vector.create([D2 * x - D3 * z, D3 * y - D1 * x, D1 * z - D2 * y]);
       var k = this.distanceFrom(P) / V.modulus();
       return Vector.create([
@@ -120,15 +130,15 @@ Line.prototype = {
         (P[2] || 0) + V.elements[2] * k
       ]);
     }
-  },
+  }
 
   // Returns a copy of the line rotated by t radians about the given line. Works by
   // finding the argument's closest point to this line's anchor point (call this C) and
   // rotating the anchor about C. Also rotates the line's direction about the argument's.
   // Be careful with this - the rotation axis' direction affects the outcome!
-  rotate: function(t, line) {
+  rotate(t, line) {
     // If we're working in 2D
-    if (typeof(line.direction) == 'undefined') { line = Line.create(line.to3D(), Vector.k); }
+    if (typeof (line.direction) == 'undefined') { line = Line.create(line.to3D(), Vector.k); }
     var R = Matrix.Rotation(t, line.direction).elements;
     var C = line.pointClosestTo(this.anchor).elements;
     var A = this.anchor.elements, D = this.direction.elements;
@@ -143,10 +153,10 @@ Line.prototype = {
       R[1][0] * D[0] + R[1][1] * D[1] + R[1][2] * D[2],
       R[2][0] * D[0] + R[2][1] * D[1] + R[2][2] * D[2]
     ]);
-  },
+  }
 
   // Returns the line's reflection in the given point or line
-  reflectionIn: function(obj) {
+  reflectionIn(obj) {
     if (obj.normal) {
       // obj is a plane
       var A = this.anchor.elements, D = this.direction.elements;
@@ -165,15 +175,15 @@ Line.prototype = {
       var P = obj.elements || obj;
       return Line.create(this.anchor.reflectionIn([P[0], P[1], (P[2] || 0)]), this.direction);
     }
-  },
+  }
 
   // Set the line's anchor point and direction.
-  setVectors: function(anchor, direction) {
+  setVectors(anchor, direction) {
     // Need to do this so that line's properties are not
     // references to the arguments passed in
     anchor = Vector.create(anchor);
     direction = Vector.create(direction);
-    if (anchor.elements.length == 2) {anchor.elements.push(0); }
+    if (anchor.elements.length == 2) { anchor.elements.push(0); }
     if (direction.elements.length == 2) { direction.elements.push(0); }
     if (anchor.elements.length > 3 || direction.elements.length > 3) { return null; }
     var mod = direction.modulus();
@@ -187,16 +197,3 @@ Line.prototype = {
     return this;
   }
 };
-
-  
-// Constructor function
-Line.create = function(anchor, direction) {
-  var L = new Line();
-  return L.setVectors(anchor, direction);
-};
-
-// Axes
-Line.X = Line.create(Vector.Zero(3), Vector.i);
-Line.Y = Line.create(Vector.Zero(3), Vector.j);
-Line.Z = Line.create(Vector.Zero(3), Vector.k);
-
