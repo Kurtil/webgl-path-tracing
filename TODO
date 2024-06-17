@@ -1,0 +1,5 @@
+- [x] Light must be part of the scene, not a simple objects lost in the objects list
+- [ ] Add the possibility to add multiple lights
+- [ ] Add glass material
+- [ ] Add the ability to assign a material per object
+- [x] Webgl2
